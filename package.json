@@ -19,7 +19,7 @@
     "@capacitor/splash-screen": "latest"
   },
   "devDependencies": {
-    "@capacitor/cli": "^7.4.4",
+    "@capacitor/cli": "^6.2.1",
     "typescript": "^5.9.3",
     "vite": "^7.1.12"
   },
