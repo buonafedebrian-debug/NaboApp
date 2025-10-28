@@ -1,30 +1,52 @@
 name: iOS Simulator Build
+
 on:
   workflow_dispatch:
-  push: { branches: [ main ] }
+  push:
+    branches:
+      - main
+
 jobs:
   ios-sim:
     runs-on: macos-14
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '20' }
-      - name: Install deps
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install npm deps
         run: |
           corepack enable || true
           npm ci || npm i
-      - name: Ensure www/index.html
+          npm i -D @capacitor/cli@^6
+          npm i @capacitor/core@^6 @capacitor/ios@^6
+
+      - name: Ensure minimal web folder
         run: |
           mkdir -p www
           [ -f www/index.html ] || echo "<!doctype html><title>Nabo</title>" > www/index.html
-      - name: Add iOS platform and sync
+
+      - name: Force fresh iOS platform
         run: |
-          npx cap add ios || true
-          npx cap sync
+          rm -rf ios
+          npx --yes @capacitor/cli@latest add ios
+
+      - name: Sync iOS
+        run: |
+          npx --yes @capacitor/cli@latest sync ios
+
       - name: Install CocoaPods
         run: |
           sudo gem install cocoapods --no-document
-          cd ios && pod install
+          cd ios/App
+          pod repo update
+          pod install
+
       - name: Build for iOS Simulator
         run: |
           xcodebuild \
@@ -34,11 +56,14 @@ jobs:
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build
-      - name: Export .app
+
+      - name: Export .app artifact
         run: |
           APP_PATH=$(find build/Build/Products -type d -name "App.app" | head -n 1)
           mkdir -p out && cp -R "$APP_PATH" out/Nabo.app
-      - uses: actions/upload-artifact@v4
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
           name: Nabo-iOS-Simulator-App
           path: out/Nabo.app
