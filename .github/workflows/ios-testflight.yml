@@ -32,12 +32,18 @@ jobs:
         with:
           ruby-version: "3.2"
           bundler-cache: true
-      - name: CocoaPods
+       - name: Ensure iOS platform exists
+        run: |
+          npx --yes @capacitor/cli@latest add ios || true
+          npx --yes @capacitor/cli@latest sync ios
+
+      - name: Install CocoaPods and pods
         run: |
           sudo gem install cocoapods --no-document
           cd ios/App
           pod repo update
           pod install
+
       - name: Fastlane build + upload to TestFlight
         env:
           APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.ASC_KEY_ID }}
