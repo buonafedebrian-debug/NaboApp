@@ -1,0 +1,44 @@
+name: iOS Simulator Build
+on:
+  workflow_dispatch:
+  push: { branches: [ main ] }
+jobs:
+  ios-sim:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Install deps
+        run: |
+          corepack enable || true
+          npm ci || npm i
+      - name: Ensure www/index.html
+        run: |
+          mkdir -p www
+          [ -f www/index.html ] || echo "<!doctype html><title>Nabo</title>" > www/index.html
+      - name: Add iOS platform and sync
+        run: |
+          npx cap add ios || true
+          npx cap sync
+      - name: Install CocoaPods
+        run: |
+          sudo gem install cocoapods --no-document
+          cd ios && pod install
+      - name: Build for iOS Simulator
+        run: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build
+      - name: Export .app
+        run: |
+          APP_PATH=$(find build/Build/Products -type d -name "App.app" | head -n 1)
+          mkdir -p out && cp -R "$APP_PATH" out/Nabo.app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Nabo-iOS-Simulator-App
+          path: out/Nabo.app
