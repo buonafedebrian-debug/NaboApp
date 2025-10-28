@@ -1,0 +1,18 @@
+﻿import { CapacitorConfig } from '@capacitor/cli';
+
+const config: CapacitorConfig = {
+  appId: 'com.nabo.marketplace',
+  appName: 'Nabo',
+  webDir: 'www',
+  server: {
+    url: 'https://nabo.mysharetribe.com',
+    cleartext: false,
+    allowNavigation: [
+      'nabo.mysharetribe.com',
+      '*.mysharetribe.com',
+      '*.stripe.com',
+      'accounts.google.com'
+    ]
+  }
+};
+export default config;
