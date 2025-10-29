@@ -51,6 +51,12 @@ jobs:
       - name: List schemes
         run: xcodebuild -list -workspace ios/App/App.xcworkspace
 
+      - name: Show Fastfile
+        run: |
+    echo "==== FASTFILE BEGIN ===="
+    sed -n '1,120p' fastlane/Fastfile
+    echo "==== FASTFILE END ===="
+    
       - name: Fastlane build + upload
         env:
           APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -60,6 +66,13 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APP_IDENTIFIER: ${{ secrets.APP_IDENTIFIER }}
         run: bundle exec fastlane ios ci
+
+        - name: Dump gym log (on failure)
+  if: failure()
+  run: |
+    LOG=$(ls -t ~/Library/Logs/gym/*.log 2>/dev/null | head -n1 || true)
+    echo "USING LOG: $LOG"
+    [ -f "$LOG" ] && tail -n 200 "$LOG" || echo "No gym log found."
 
       - name: Verify IPA
         run: |
