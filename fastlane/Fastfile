@@ -1,11 +1,7 @@
 default_platform(:ios)
-
 platform :ios do
   lane :ci do
-    # 1) Ensure a new build number (avoids Apple's "duplicate build" rejection)
     increment_build_number(xcodeproj: "ios/App/App.xcodeproj")
-
-    # 2) Build .ipa with automatic signing
     gym(
       workspace: "ios/App/App.xcworkspace",
       scheme: "App",
@@ -13,11 +9,9 @@ platform :ios do
       export_method: "app-store",
       output_directory: "build",
       clean: true,
-      xcargs: "DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']}",
+      xcargs: "DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']} PRODUCT_BUNDLE_IDENTIFIER=com.nabo.marketplace CODE_SIGN_STYLE=Automatic CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES",
       export_options: { signingStyle: "automatic" }
     )
-
-    # 3) Upload to the correct app explicitly
     pilot(
       app_identifier: ENV['APP_IDENTIFIER'],
       skip_waiting_for_build_processing: true,
