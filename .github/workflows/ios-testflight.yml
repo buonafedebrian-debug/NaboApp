@@ -1,87 +1,52 @@
-name: iOS TestFlight
-
+﻿name: iOS TestFlight
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
   build-upload:
     runs-on: macos-14
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install npm deps
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - name: NPM deps
         run: |
           corepack enable || true
           npm ci || npm i
           npm i -D @capacitor/cli@^6
           npm i @capacitor/core@^6 @capacitor/ios@^6
-
-      - name: Ensure www/index.html
+      - name: Ensure config + web
         run: |
+          echo '{ "appId":"com.nabo.marketplace","appName":"Nabo","webDir":"www" }' > capacitor.config.json
           mkdir -p www
-          [ -f www/index.html ] || echo "<!doctype html><title>Nabo</title>" > www/index.html
-
-      - name: Ensure iOS platform exists
+          [ -f www/index.html ] || echo '<!doctype html><title>Nabo</title>' > www/index.html
+      - name: Generate iOS and sync
         run: |
           npx --yes @capacitor/cli@latest add ios || true
           npx --yes @capacitor/cli@latest sync ios
-
       - name: Ruby + Bundler
         uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.2'
-          bundler-cache: true
-
-     - name: Ensure iOS platform exists
-  run: |
-    npx --yes @capacitor/cli@latest add ios || true
-    npx --yes @capacitor/cli@latest sync ios
-
-
-      - name: Install CocoaPods and pods
+        with: { ruby-version: "3.2", bundler-cache: true }
+      - name: CocoaPods
         run: |
           sudo gem install cocoapods --no-document
-          cd ios/App
-          pod repo update
-          pod install
-
-      - name: Sanity: list schemes
-  run: |
-    xcodebuild -list -json -workspace ios/App/App.xcworkspace | tee schemes.json
-    cat schemes.json
-
-- name: Fastlane build + upload (verbose)
-  env:
-    APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-    APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-    APP_STORE_CONNECT_API_KEY_KEY: ${{ secrets.ASC_KEY_P8_BASE64 }}
-    APP_STORE_CONNECT_API_KEY_IS_KEY_CONTENT_BASE64: true
-    APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-    APP_IDENTIFIER: ${{ secrets.APP_IDENTIFIER }}
-  run: |
-    bundle exec fastlane --verbose ios ci
-
-- name: Verify IPA exists
-  run: |
-    ls -la build || true
-    test -f build/*.ipa
-
-- name: Upload Xcode/Gym logs (always)
-  if: always()
-  uses: actions/upload-artifact@v4
-  with:
-    name: gym-logs
-    path: |
-      /Users/runner/Library/Logs/gym/**
-      ~/Library/Logs/gym/**
-      build/**
+          cd ios/App && pod install
+      - name: Fastlane build + upload
+        env:
+          APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_KEY: ${{ secrets.ASC_KEY_P8_BASE64 }}
+          APP_STORE_CONNECT_API_KEY_IS_KEY_CONTENT_BASE64: true
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APP_IDENTIFIER: ${{ secrets.APP_IDENTIFIER }}
+        run: bundle exec fastlane ios ci
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipa-and-logs
+          path: |
+            build/*.ipa
+            ~/Library/Logs/gym/**
