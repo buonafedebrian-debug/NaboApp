@@ -1,15 +1,22 @@
 default_platform(:ios)
 platform :ios do
   lane :ci do
-    sh("cd ios && pod install --repo-update")
+    increment_build_number(xcodeproj: "ios/App/App.xcodeproj")
     gym(
       workspace: "ios/App/App.xcworkspace",
       scheme: "App",
       configuration: "Release",
       export_method: "app-store",
       output_directory: "build",
-      clean: true
+      clean: true,
+      xcargs: "DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']} PRODUCT_BUNDLE_IDENTIFIER=com.nabo.marketplace CODE_SIGN_STYLE=Automatic CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES",
+      export_options: { signingStyle: "automatic" }
     )
-    pilot(skip_waiting_for_build_processing: true, distribute_external: false)
+    pilot(
+      app_identifier: ENV['APP_IDENTIFIER'],
+      skip_waiting_for_build_processing: true,
+      distribute_external: false,
+      verbose: true
+    )
   end
 end
