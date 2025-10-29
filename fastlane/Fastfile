@@ -1,14 +1,16 @@
 default_platform(:ios)
+
 platform :ios do
   lane :ci do
-    sh("cd ios && pod install --repo-update")
     gym(
       workspace: "ios/App/App.xcworkspace",
       scheme: "App",
       configuration: "Release",
       export_method: "app-store",
       output_directory: "build",
-      clean: true
+      clean: true,
+      xcargs: "DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']}",
+      export_options: { signingStyle: "automatic" }
     )
     pilot(skip_waiting_for_build_processing: true, distribute_external: false)
   end
