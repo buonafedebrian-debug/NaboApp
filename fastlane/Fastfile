@@ -2,6 +2,10 @@ default_platform(:ios)
 
 platform :ios do
   lane :ci do
+    # 1) Ensure a new build number (avoids Apple's "duplicate build" rejection)
+    increment_build_number(xcodeproj: "ios/App/App.xcodeproj")
+
+    # 2) Build .ipa with automatic signing
     gym(
       workspace: "ios/App/App.xcworkspace",
       scheme: "App",
@@ -12,6 +16,13 @@ platform :ios do
       xcargs: "DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']}",
       export_options: { signingStyle: "automatic" }
     )
-    pilot(skip_waiting_for_build_processing: true, distribute_external: false)
+
+    # 3) Upload to the correct app explicitly
+    pilot(
+      app_identifier: ENV['APP_IDENTIFIER'],
+      skip_waiting_for_build_processing: true,
+      distribute_external: false,
+      verbose: true
+    )
   end
 end
