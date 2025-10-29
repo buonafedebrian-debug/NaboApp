@@ -1,9 +1,6 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
-const config: CapacitorConfig = {
-  appId: 'com.nabo.marketplace',
-  appName: 'Nabo',
-  webDir: 'www',
+const config: CapacitorConfig = { "appId": "com.nabo.marketplace", "appName": "Nabo", "webDir": "www" }
   server: {
     url: 'https://nabo.mysharetribe.com',
     cleartext: false,
