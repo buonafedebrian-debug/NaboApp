@@ -49,14 +49,14 @@ jobs:
           pod repo update
           pod install
 
-  
-     - name: Fastlane build + upload to TestFlight
+      - name: Fastlane build + upload (verbose)
         env:
           APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           APP_STORE_CONNECT_API_KEY_KEY: ${{ secrets.ASC_KEY_P8_BASE64 }}
           APP_STORE_CONNECT_API_KEY_IS_KEY_CONTENT_BASE64: true
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APP_IDENTIFIER: ${{ secrets.APP_IDENTIFIER }}
         run: |
           bundle exec fastlane --verbose ios ci
 
@@ -64,7 +64,6 @@ jobs:
         run: |
           ls -la build || true
           test -f build/*.ipa
-
 
       - name: Upload build artifact
         if: always()
