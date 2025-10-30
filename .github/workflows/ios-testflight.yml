@@ -36,14 +36,13 @@ jobs:
           done
           if [ $missing -eq 1 ]; then exit 1; fi
         env:
-  ASC_KEY_ID:        ${{ secrets.ASC_KEY_ID }}
-  ASC_ISSUER_ID:     ${{ secrets.ASC_ISSUER_ID }}
-  ASC_KEY_BASE64:    ${{ secrets.ASC_KEY_BASE64 }}
-  APPLE_TEAM_ID:     ${{ secrets.APPLE_TEAM_ID }}
-  APP_IDENTIFIER:    ${{ secrets.APP_IDENTIFIER }}
-  MATCH_GIT_URL:     ${{ secrets.MATCH_GIT_URL }}
-  MATCH_PASSWORD:    ${{ secrets.MATCH_PASSWORD }}
-
+          ASC_KEY_ID:        ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID:     ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_BASE64:    ${{ secrets.ASC_KEY_BASE64 }}
+          APPLE_TEAM_ID:     ${{ secrets.APPLE_TEAM_ID }}
+          APP_IDENTIFIER:    ${{ secrets.APP_IDENTIFIER }}
+          MATCH_GIT_URL:     ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD:    ${{ secrets.MATCH_PASSWORD }}
 
       - name: Fastfile syntax check
         run: ruby -c fastlane/Fastfile
