@@ -20,6 +20,7 @@ platform :ios do
       storage_mode: "git",
       git_url: ENV["MATCH_GIT_URL"],
       git_branch: "main",
+      password: ENV["MATCH_PASSWORD"],
       keychain_name: "build.keychain",
       keychain_password: "temp_pass",
       verbose: true
