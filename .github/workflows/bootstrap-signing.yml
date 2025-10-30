@@ -1,0 +1,27 @@
+name: Bootstrap Signing
+on: workflow_dispatch
+jobs:
+  bootstrap:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with: { ruby-version: '3.2', bundler-cache: true }
+      - name: Install fastlane
+        run: gem install fastlane -N
+      - name: Decode ASC key to file (optional)
+        run: |
+          echo "$ASC_KEY_BASE64" | base64 -D > AuthKey.p8
+        env:
+          ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
+      - name: Run fastlane match to create signing
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          APP_IDENTIFIER: ${{ secrets.APP_IDENTIFIER }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          fastlane ios ci_build --env bootstrap || true
