@@ -1,16 +1,23 @@
 name: iOS TestFlight
+
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
 
+concurrency:
+  group: ios-testflight-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-upload:
     runs-on: macos-14
     permissions:
-      contents: read
+      contents: write
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Use Ruby
         uses: ruby/setup-ruby@v1
@@ -21,24 +28,60 @@ jobs:
       - name: Install Fastlane
         run: gem install fastlane -N
 
+      - name: Preflight secrets
+        run: |
+          missing=0
+          for v in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_BASE64 APPLE_TEAM_ID APP_IDENTIFIER MATCH_GIT_URL MATCH_PASSWORD; do
+            if [ -z "${!v}" ]; then echo "Missing secret: $v"; missing=1; fi
+          done
+          if [ $missing -eq 1 ]; then exit 1; fi
+        env:
+          ASC_KEY_ID:        ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID:     ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_BASE64:    ${{ secrets.ASC_KEY_BASE64 }}
+          APPLE_TEAM_ID:     ${{ secrets.APPLE_TEAM_ID }}
+          APP_IDENTIFIER:    ${{ secrets.APP_IDENTIFIER }}
+          MATCH_GIT_URL:     ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD:    ${{ secrets.MATCH_PASSWORD }}
+
+      - name: Fastfile syntax check
+        run: ruby -c fastlane/Fastfile
+
       - name: Xcode Select
         run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
-      - name: Pod install (if CocoaPods is used)
+      - name: CocoaPods (if Podfile exists)
         run: |
           if [ -f "Podfile" ]; then
             sudo gem install cocoapods -N
             pod install --repo-update
           fi
 
-      - name: Build and Upload to TestFlight
-        env:
-              ASC_KEY_ID:        ${{ secrets.ASC_KEY_ID }}
-              ASC_ISSUER_ID:     ${{ secrets.ASC_ISSUER_ID }}
-              ASC_KEY_BASE64:    ${{ secrets.ASC_KEY_BASE64 }}
-              APPLE_TEAM_ID:     ${{ secrets.APPLE_TEAM_ID }}
-              APP_IDENTIFIER:    ${{ secrets.APP_IDENTIFIER }} 
-              MATCH_PASSWORD:    ${{ secrets.MATCH_PASSWORD }}
-              MATCH_GIT_URL:     ${{ secrets.MATCH_GIT_URL }}
+      - name: Bump build number (CFBundleVersion)
+        run: |
+          set -e
+          # Adjust path to your Info.plist if different
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" "App/Info.plist" || true
+          git config user.email "actions@github.com"
+          git config user.name "github-actions"
+          git add "App/Info.plist" || true
+          git commit -m "CI: bump build number to $GITHUB_RUN_NUMBER" || true
 
-        run: fastlane ios ci_build
+      - name: Build and upload to TestFlight
+        env:
+          ASC_KEY_ID:        ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID:     ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_BASE64:    ${{ secrets.ASC_KEY_BASE64 }}
+          APPLE_TEAM_ID:     ${{ secrets.APPLE_TEAM_ID }}
+          APP_IDENTIFIER:    ${{ secrets.APP_IDENTIFIER }}     # e.g., com.usenabo.nabomarketplace
+          MATCH_GIT_URL:     ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD:    ${{ secrets.MATCH_PASSWORD }}     # consumed implicitly by fastlane-match
+          GITHUB_TOKEN:      ${{ secrets.GITHUB_TOKEN }}       # only needed if your MATCH_GIT_URL uses x-access-token
+          FASTLANE_SKIP_UPDATE_CHECK: "1"
+        run: |
+          # Prefer Bundler if Gemfile exists
+          if [ -f "Gemfile" ]; then
+            bundle exec fastlane ios ci_build
+          else
+            fastlane ios ci_build
+          fi
