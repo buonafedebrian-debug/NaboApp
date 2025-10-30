@@ -1,92 +1,43 @@
 name: iOS TestFlight
-
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build-upload:
     runs-on: macos-14
-
+    permissions:
+      contents: read
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: NPM deps
-        run: |
-          set -e
-          corepack enable || true
-          npm ci || npm i
-          npm i -D @capacitor/cli@^6
-          npm i @capacitor/core@^6 @capacitor/ios@^6
-
-      - name: Ensure capacitor.config.json + web
-        run: |
-          [ -f capacitor.config.json ] || printf '{\n  "appId":"com.nabo.marketplace",\n  "appName":"Nabo",\n  "webDir":"www"\n}\n' > capacitor.config.json
-          mkdir -p www
-          [ -f www/index.html ] || echo '<!doctype html><title>Nabo</title>' > www/index.html
-
-      - name: Generate iOS and sync
-        run: |
-          npx --yes @capacitor/cli@latest add ios || true
-          npx --yes @capacitor/cli@latest sync ios
-
-      - name: Ruby + Bundler
+      - name: Use Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
           bundler-cache: true
 
-      - name: CocoaPods
+      - name: Install Fastlane
+        run: gem install fastlane -N
+
+      - name: Xcode Select
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Pod install (if CocoaPods is used)
         run: |
-          sudo gem install cocoapods --no-document
-          cd ios/App
-          pod install
+          if [ -f "Podfile" ]; then
+            sudo gem install cocoapods -N
+            pod install --repo-update
+          fi
 
-      - name: List schemes
-        run: xcodebuild -list -workspace ios/App/App.xcworkspace
-
-      - name: Show Fastfile
-        run: |
-          echo "==== FASTFILE BEGIN ===="
-          sed -n '1,120p' fastlane/Fastfile
-          echo "==== FASTFILE END ===="
-
-      - name: Fastlane build + upload
+      - name: Build and Upload to TestFlight
         env:
-          APP_STORE_CONNECT_API_KEY_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          APP_STORE_CONNECT_API_KEY_KEY: ${{ secrets.ASC_KEY_P8_BASE64 }}
-          APP_STORE_CONNECT_API_KEY_IS_KEY_CONTENT_BASE64: true
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           APP_IDENTIFIER: ${{ secrets.APP_IDENTIFIER }}
-        run: bundle exec fastlane ios ci
-
-      - name: Verify IPA
-        run: |
-          ls -la build || true
-          test -f build/*.ipa
-
-      - name: Dump gym log (on failure)
-        if: failure()
-        run: |
-          LOG=$(ls -t ~/Library/Logs/gym/*.log 2>/dev/null | head -n1 || true)
-          echo "USING LOG: $LOG"
-          [ -f "$LOG" ] && tail -n 200 "$LOG" || echo "No gym log found."
-
-      - name: Upload artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ipa-and-logs
-          path: |
-            build/*.ipa
-            ~/Library/Logs/gym/**
-            /Users/runner/Library/Logs/gym/**
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: fastlane ios ci_build
