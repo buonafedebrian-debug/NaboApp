@@ -13,10 +13,13 @@ platform :ios do
       in_house: false
     )
 
+    # Use MATCH_PASSWORD from secrets for keychain password
+    keychain_pass = ENV["MATCH_PASSWORD"] || "temp_pass"
+
     delete_keychain(name: "build.keychain") rescue nil
     create_keychain(
       name: "build.keychain",
-      password: "temp_pass",
+      password: keychain_pass,
       default_keychain: true,
       unlock: true,
       timeout: 3600,
@@ -31,14 +34,17 @@ platform :ios do
       git_url: ENV["MATCH_GIT_URL"],
       git_branch: "main",
       keychain_name: "build.keychain",
-      keychain_password: "temp_pass",
+      keychain_password: keychain_pass,
       readonly: false,
       verbose: true
     )
 
+    workspace = "ios/App/App.xcworkspace"
+    scheme = "App"
+
     gym(
-      project: "ios/App/App.xcodeproj",
-      scheme: "App",
+      workspace: workspace,
+      scheme: scheme,
       configuration: "Release",
       export_method: "app-store",
       output_directory: "build",
