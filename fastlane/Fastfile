@@ -1,23 +1,39 @@
-﻿default_platform(:ios)
+default_platform :ios
 
 platform :ios do
-  lane :ci do
-    increment_build_number(xcodeproj: "ios/App/App.xcodeproj")
+  api_key = app_store_connect_api_key(
+    key_id: ENV["ASC_KEY_ID"],
+    issuer_id: ENV["ASC_ISSUER_ID"],
+    key_content: Base64.decode64(ENV["ASC_KEY_BASE64"]),
+    duration: 1200, in_house: false
+  )
+
+  desc "Bootstrap signing and build for TestFlight"
+  lane :ci_build do
+    delete_keychain(name: "build.keychain") rescue nil
+    create_keychain(name: "build.keychain", password: "temp_pass", default_keychain: true, unlock: true, timeout: 3600, lock_when_sleeps: false)
+
+    match(
+      type: "appstore",
+      api_key: api_key,
+      readonly: false,
+      storage_mode: "git",
+      git_url: ENV["MATCH_GIT_URL"],
+      git_branch: "main",
+      keychain_name: "build.keychain",
+      keychain_password: "temp_pass",
+      verbose: true
+    )
+
     gym(
-      workspace: "ios/App/App.xcworkspace",
       scheme: "App",
       configuration: "Release",
       export_method: "app-store",
       output_directory: "build",
-      clean: true,
-      xcargs: "PRODUCT_BUNDLE_IDENTIFIER=com.nabo.marketplace DEVELOPMENT_TEAM=#{ENV['APPLE_TEAM_ID']} CODE_SIGN_STYLE=Automatic CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES",
-      export_options: { signingStyle: "automatic" }
+      output_name: "App.ipa",
+      clean: true
     )
-    pilot(
-      app_identifier: ENV['APP_IDENTIFIER'],
-      skip_waiting_for_build_processing: true,
-      distribute_external: false,
-      verbose: true
-    )
+
+    pilot(api_key: api_key, ipa: "build/App.ipa", skip_waiting_for_build_processing: true)
   end
 end
