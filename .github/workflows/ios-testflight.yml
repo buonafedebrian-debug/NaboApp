@@ -61,7 +61,7 @@ jobs:
         run: |
           set -e
           # Adjust path to your Info.plist if different
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER "ios/App/App/Info.plist" || true
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" "ios/App/App/Info.plist" || true
           git config user.email "actions@github.com"
           git config user.name "github-actions"
           git add "App/Info.plist" || true
