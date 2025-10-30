@@ -50,30 +50,37 @@ jobs:
       - name: Xcode Select
         run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
-      - name: CocoaPods (if Podfile exists)
+      - name: CocoaPods (if Podfile exists under ios/App)
         run: |
-          if [ -f "Podfile" ]; then
+          if [ -f "ios/App/Podfile" ]; then
             sudo gem install cocoapods -N
+            cd ios/App
             pod install --repo-update
+            cd -
           fi
 
       - name: Bump build number (CFBundleVersion)
         run: |
           set -e
-          # Adjust path to your Info.plist if different
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" "ios/App/App/Info.plist" || true
-          git config user.email "actions@github.com"
-          git config user.name "github-actions"
-          git add "App/Info.plist" || true
-          git commit -m "CI: bump build number to $GITHUB_RUN_NUMBER" || true
+          PLIST_PATH="ios/App/App/Info.plist"
+          # Adjust path above if your Info.plist is in a different location
+          if [ -f "$PLIST_PATH" ]; then
+            /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $GITHUB_RUN_NUMBER" "$PLIST_PATH" || true
+            git config user.email "actions@github.com"
+            git config user.name "github-actions"
+            git add "$PLIST_PATH" || true
+            git commit -m "CI: bump build number to $GITHUB_RUN_NUMBER" || true
+          else
+            echo "Info.plist not found at $PLIST_PATH"
+          fi
 
       - name: Build and upload to TestFlight
         env:
           ASC_KEY_ID:        ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID:     ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_BASE64:    ${{ secrets.ASC_KEY_BASE64 }}
-          APPLE_TEAM_ID:     ${{ secrets.APPLE_TEAM_ID }}
-          APP_IDENTIFIER:    ${{ secrets.APP_IDENTIFIER }}     # e.g., com.usenabo.nabomarketplace
+          APPLE_TEAM_ID:     ${{ secrets.APPLE_TEAM_ID }}     # e.g., com.usenabo.nabomarketplace
+          APP_IDENTIFIER:    ${{ secrets.APP_IDENTIFIER }}
           MATCH_GIT_URL:     ${{ secrets.MATCH_GIT_URL }}
           MATCH_PASSWORD:    ${{ secrets.MATCH_PASSWORD }}     # consumed implicitly by fastlane-match
           GITHUB_TOKEN:      ${{ secrets.GITHUB_TOKEN }}       # only needed if your MATCH_GIT_URL uses x-access-token
