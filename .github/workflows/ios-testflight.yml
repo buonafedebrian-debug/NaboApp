@@ -33,11 +33,12 @@ jobs:
 
       - name: Build and Upload to TestFlight
         env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_KEY_BASE64: ${{ secrets.ASC_KEY_BASE64 }}
-          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          APP_IDENTIFIER: ${{ secrets.APP_IDENTIFIER }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+              ASC_KEY_ID:        ${{ secrets.ASC_KEY_ID }}
+              ASC_ISSUER_ID:     ${{ secrets.ASC_ISSUER_ID }}
+              ASC_KEY_BASE64:    ${{ secrets.ASC_KEY_BASE64 }}
+              APPLE_TEAM_ID:     ${{ secrets.APPLE_TEAM_ID }}
+              APP_IDENTIFIER:    ${{ secrets.APP_IDENTIFIER }} 
+              MATCH_PASSWORD:    ${{ secrets.MATCH_PASSWORD }}
+              MATCH_GIT_URL:     ${{ secrets.MATCH_GIT_URL }}
+
         run: fastlane ios ci_build
